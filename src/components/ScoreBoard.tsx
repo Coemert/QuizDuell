@@ -152,7 +152,7 @@ export default function ScoreBoard() {
                   <span
                     className={`font-display text-base ${entry.correct ? 'text-green' : 'text-red'}`}
                   >
-                    {entry.correct ? '+' : '–'}{entry.points}
+                    {entry.correct ? '+' : ''}{entry.points}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-text-muted">
