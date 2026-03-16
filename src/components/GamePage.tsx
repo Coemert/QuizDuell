@@ -23,10 +23,12 @@ export default function GamePage() {
   const currentPlayer = getCurrentPlayer();
   const currentTeam = currentPlayer ? teams.find((t) => t.id === currentPlayer.teamId) : undefined;
 
-  // Build a unified set of point rows from all categories
-  const allPoints = Array.from(
-    new Set(quizSet.categories.flatMap((c) => c.questions.map((q) => q.points)))
-  ).sort((a, b) => a - b);
+  // Each category's questions sorted by points; rows are by index, not point value
+  const sortedCategories = quizSet.categories.map((cat) => ({
+    ...cat,
+    questions: [...cat.questions].sort((a, b) => a.points - b.points),
+  }));
+  const maxQuestions = Math.max(0, ...sortedCategories.map((c) => c.questions.length));
 
   const totalQuestions = quizSet.categories.reduce((s, c) => s + c.questions.length, 0);
   const answeredCount = quizSet.categories.reduce(
@@ -109,7 +111,7 @@ export default function GamePage() {
             style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${quizSet.categories.length}, minmax(0, 1fr))`,
-              gridTemplateRows: `auto repeat(${allPoints.length}, 1fr)`,
+              gridTemplateRows: `auto repeat(${maxQuestions}, 1fr)`,
               gap: '8px',
               minWidth: `${quizSet.categories.length * 140}px`,
             }}
@@ -131,9 +133,9 @@ export default function GamePage() {
             ))}
 
             {/* Question cells */}
-            {allPoints.map((points, rowIdx) =>
-              quizSet.categories.map((cat, colIdx) => {
-                const question = cat.questions.find((q) => q.points === points);
+            {Array.from({ length: maxQuestions }, (_, rowIdx) =>
+              sortedCategories.map((cat, colIdx) => {
+                const question = cat.questions[rowIdx];
                 const isAnswered = question?.answered ?? false;
                 const answeredCorrectly = question?.answeredCorrectly;
                 const answeredPlayer = question?.answeredBy
@@ -143,7 +145,7 @@ export default function GamePage() {
                 if (!question) {
                   return (
                     <div
-                      key={`${cat.id}-${points}`}
+                      key={`${cat.id}-${rowIdx}`}
                       className="rounded-xl border border-dashed border-border/40 opacity-30"
                     />
                   );
@@ -188,7 +190,7 @@ export default function GamePage() {
                           textShadow: '0 0 12px rgba(240,180,41,0.35)',
                         }}
                       >
-                        {points}
+                        {question.points}
                       </span>
                     )}
                   </motion.button>
