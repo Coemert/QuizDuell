@@ -172,12 +172,12 @@ export default function GamePage() {
                     {isAnswered ? (
                       <div className="flex flex-col items-center gap-1">
                         <div
-                          className={`font-display text-2xl ${answeredCorrectly ? 'text-green' : 'text-red'}`}
+                          className={`font-display text-5xl ${answeredCorrectly ? 'text-green' : 'text-red'}`}
                         >
                           {answeredCorrectly ? '✓' : '✗'}
                         </div>
                         {answeredPlayer && (
-                          <div className="font-ui text-[10px] text-text-muted text-center leading-tight max-w-full px-1 truncate">
+                          <div className="font-ui text-[20px] text-text-muted text-center leading-tight max-w-full px-1 truncate">
                             {answeredPlayer.name}
                           </div>
                         )}

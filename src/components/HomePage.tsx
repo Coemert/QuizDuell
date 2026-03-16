@@ -36,7 +36,7 @@ export default function HomePage() {
     e.target.value = '';
   }
 
-  const letters = 'QUIZDUELL'.split('');
+  const letters = 'Saltquiz'.split('');
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
@@ -67,7 +67,7 @@ export default function HomePage() {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
       >
-        The Ultimate Quiz Show Experience
+        800m Eiffel Tower Edition (╯°□°）╯︵ ┻━┻
       </motion.p>
 
       {/* Cards */}
