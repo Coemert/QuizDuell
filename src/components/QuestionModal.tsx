@@ -16,6 +16,8 @@ export default function QuestionModal() {
   const timerDuration = activeQuestion?.question.timerSeconds ?? quizSet.defaultTimerSeconds;
   const [timeLeft, setTimeLeft] = useState(timerDuration);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
+  const [autoResult, setAutoResult] = useState<boolean | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopTimer = useCallback(() => {
@@ -26,11 +28,13 @@ export default function QuestionModal() {
     }
   }, []);
 
-  // Start timer when question opens
+  // Start timer when question opens; reset selection
   useEffect(() => {
     if (activeQuestion && questionPhase === 'question') {
       setTimeLeft(timerDuration);
       setTimerRunning(true);
+      setSelectedOptionIndex(null);
+      setAutoResult(null);
     } else {
       stopTimer();
     }
@@ -62,6 +66,15 @@ export default function QuestionModal() {
   const isExpired = timeLeft === 0 && questionPhase === 'question';
 
   function handleReveal() {
+    stopTimer();
+    revealAnswer();
+  }
+
+  function handleOptionClick(idx: number) {
+    if (questionPhase !== 'question') return;
+    const correct = idx === activeQuestion?.question.correctOptionIndex;
+    setSelectedOptionIndex(idx);
+    setAutoResult(correct);
     stopTimer();
     revealAnswer();
   }
@@ -188,9 +201,59 @@ export default function QuestionModal() {
                 </p>
               </div>
 
-              {/* Answer reveal */}
+              {/* Selection options */}
+              {activeQuestion.question.options && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                  {activeQuestion.question.options.map((opt, idx) => {
+                    const isCorrect = idx === activeQuestion.question.correctOptionIndex;
+                    const isSelected = idx === selectedOptionIndex;
+                    const revealed = questionPhase === 'answer';
+
+                    let containerCls = 'flex items-center gap-3 p-4 rounded-xl border transition-all ';
+                    let labelCls = 'w-7 h-7 rounded-lg flex items-center justify-center font-display text-sm shrink-0 border ';
+                    let textCls = 'font-ui text-sm leading-snug ';
+
+                    if (!revealed) {
+                      containerCls += 'bg-elevated border-border hover:border-gold/50 hover:bg-elevated/80 cursor-pointer';
+                      labelCls += 'bg-base border-border text-gold';
+                      textCls += 'text-text-primary';
+                    } else if (isCorrect) {
+                      containerCls += 'bg-green/10 border-green/50';
+                      labelCls += 'bg-green/20 border-green/50 text-green';
+                      textCls += 'text-green font-semibold';
+                    } else if (isSelected) {
+                      containerCls += 'bg-red/10 border-red/40';
+                      labelCls += 'bg-red/20 border-red/40 text-red';
+                      textCls += 'text-red';
+                    } else {
+                      containerCls += 'bg-elevated/30 border-border opacity-30';
+                      labelCls += 'bg-base border-border text-text-muted';
+                      textCls += 'text-text-muted';
+                    }
+
+                    return (
+                      <motion.div
+                        key={idx}
+                        onClick={() => handleOptionClick(idx)}
+                        animate={revealed && isCorrect ? { scale: [1, 1.04, 1] } : {}}
+                        transition={{ duration: 0.35 }}
+                        className={containerCls}
+                      >
+                        <span className={labelCls}>{['A', 'B', 'C', 'D'][idx]}</span>
+                        <span className={textCls}>
+                          {opt || <span className="italic opacity-50">Empty</span>}
+                        </span>
+                        {revealed && isCorrect && <Check className="w-4 h-4 text-green ml-auto shrink-0" />}
+                        {revealed && isSelected && !isCorrect && <XCircle className="w-4 h-4 text-red ml-auto shrink-0" />}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Answer reveal — plain text only (no MC options) */}
               <AnimatePresence>
-                {questionPhase === 'answer' && (
+                {questionPhase === 'answer' && !activeQuestion.question.options && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
@@ -210,7 +273,7 @@ export default function QuestionModal() {
 
               {/* Action buttons */}
               <div className="flex gap-3">
-                {questionPhase === 'question' && (
+                {questionPhase === 'question' && !activeQuestion.question.options && (
                   <motion.button
                     onClick={handleReveal}
                     className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-ui font-semibold text-base
@@ -224,7 +287,20 @@ export default function QuestionModal() {
                   </motion.button>
                 )}
 
-                {questionPhase === 'answer' && (
+                {questionPhase === 'answer' && activeQuestion.question.options && (
+                  <motion.button
+                    onClick={() => submitAnswer(autoResult ?? false)}
+                    className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-ui font-semibold text-base
+                      bg-elevated border border-border text-text-primary hover:bg-card transition-colors"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <X className="w-5 h-5" />
+                    Close
+                  </motion.button>
+                )}
+
+                {questionPhase === 'answer' && !activeQuestion.question.options && (
                   <>
                     <motion.button
                       onClick={() => submitAnswer(false)}

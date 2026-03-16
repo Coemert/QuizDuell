@@ -9,6 +9,8 @@ export interface Question {
   question: string;
   answer: string;
   imageDataUrl?: string; // base64-encoded image (gif/png/jpeg)
+  options?: string[];          // up to 4 multiple-choice options
+  correctOptionIndex?: number; // index of the correct option (0–3)
   timerSeconds?: number; // overrides default if set
   answered: boolean;
   answeredBy?: string; // player id
@@ -88,3 +90,10 @@ export const PLAYER_COLORS = [
 ];
 
 export const DEFAULT_POINT_VALUES = [100, 200, 300, 400, 500, 600];
+
+export interface QuizExport {
+  quizSet: QuizSet;
+  players: Player[];
+  teams: Team[];
+  teamMode: TeamMode;
+}

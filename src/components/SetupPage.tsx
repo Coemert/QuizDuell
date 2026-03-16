@@ -2,10 +2,10 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, Download, Plus, Trash2, Users, ClipboardList,
-  Play, ChevronDown, ChevronUp, Clock, RotateCcw, ImageIcon
+  Play, ChevronDown, ChevronUp, Clock, RotateCcw, ImageIcon, ListChecks
 } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import type { Category, Question } from '../types';
+import type { Category, Question, QuizExport } from '../types';
 import { TEAM_COLORS, PLAYER_COLORS } from '../types';
 
 // ─── Shared input styles ──────────────────────────────────────────
@@ -155,16 +155,98 @@ function QuestionRow({
                   className={inputCls + ' resize-none'}
                 />
               </div>
-              <div>
-                <label className="font-ui text-xs text-text-muted block mb-1.5">Answer</label>
-                <textarea
-                  value={question.answer}
-                  onChange={(e) => onUpdate({ answer: e.target.value })}
-                  placeholder="Enter the answer..."
-                  rows={2}
-                  className={inputCls + ' resize-none'}
-                />
+              {!question.options && (
+                <div>
+                  <label className="font-ui text-xs text-text-muted block mb-1.5">Answer</label>
+                  <textarea
+                    value={question.answer}
+                    onChange={(e) => onUpdate({ answer: e.target.value })}
+                    placeholder="Enter the answer..."
+                    rows={2}
+                    className={inputCls + ' resize-none'}
+                  />
+                </div>
+              )}
+              {/* Selection mode toggle */}
+              <div className="flex items-center gap-3">
+                <label className="font-ui text-xs text-text-muted w-20 shrink-0 flex items-center gap-1">
+                  <ListChecks className="w-3 h-3" /> Options
+                </label>
+                <button
+                  onClick={() => {
+                    if (question.options) {
+                      onUpdate({ options: undefined, correctOptionIndex: undefined });
+                    } else {
+                      onUpdate({ options: ['', ''], correctOptionIndex: 0 });
+                    }
+                  }}
+                  className={`text-xs px-2.5 py-1 rounded-lg font-ui font-medium transition-colors ${
+                    question.options
+                      ? 'bg-gold/20 text-gold border border-gold/30'
+                      : 'bg-elevated text-text-muted border border-border hover:border-gold/30'
+                  }`}
+                >
+                  {question.options ? 'Selection ON' : 'Add Selection'}
+                </button>
               </div>
+
+              {/* Options editor */}
+              {question.options && (
+                <div className="space-y-2 pl-0">
+                  {question.options.map((opt, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <button
+                        onClick={() => onUpdate({ correctOptionIndex: idx })}
+                        title="Mark as correct answer"
+                        className={`w-7 h-7 rounded-lg border-2 shrink-0 flex items-center justify-center font-display text-xs font-bold transition-colors ${
+                          question.correctOptionIndex === idx
+                            ? 'border-green bg-green/20 text-green'
+                            : 'border-border text-text-muted hover:border-gold/40 hover:text-gold'
+                        }`}
+                      >
+                        {['A', 'B', 'C', 'D'][idx]}
+                      </button>
+                      <input
+                        value={opt}
+                        onChange={(e) => {
+                          const next = [...question.options!];
+                          next[idx] = e.target.value;
+                          onUpdate({ options: next });
+                        }}
+                        placeholder={`Option ${['A', 'B', 'C', 'D'][idx]}...`}
+                        className={inputCls}
+                      />
+                      {question.options!.length > 2 && (
+                        <button
+                          onClick={() => {
+                            const next = question.options!.filter((_, i) => i !== idx);
+                            const prevCorrect = question.correctOptionIndex ?? 0;
+                            const newCorrect =
+                              prevCorrect === idx
+                                ? 0
+                                : prevCorrect > idx
+                                ? prevCorrect - 1
+                                : prevCorrect;
+                            onUpdate({ options: next, correctOptionIndex: newCorrect });
+                          }}
+                          className="p-1.5 rounded-lg text-text-muted hover:text-red hover:bg-red/10 transition-colors shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {question.options.length < 4 && (
+                    <button
+                      onClick={() => onUpdate({ options: [...question.options!, ''] })}
+                      className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-border text-text-muted font-ui text-sm hover:border-gold/40 hover:text-gold/70 transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Option
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div>
                 <label className="font-ui text-xs text-text-muted block mb-1.5">Image (optional)</label>
                 <input
@@ -278,12 +360,16 @@ function CategoryCard({ category }: { category: Category }) {
 // ─── Quiz Editor Tab ───────────────────────────────────────────────
 function QuizEditorTab() {
   const quizSet = useGameStore((s) => s.quizSet);
+  const players = useGameStore((s) => s.players);
+  const teams = useGameStore((s) => s.teams);
+  const teamMode = useGameStore((s) => s.teamMode);
   const setQuizName = useGameStore((s) => s.setQuizName);
   const setTimerSeconds = useGameStore((s) => s.setTimerSeconds);
   const addCategory = useGameStore((s) => s.addCategory);
 
   function handleExport() {
-    const json = JSON.stringify(quizSet, null, 2);
+    const exportData: QuizExport = { quizSet, players, teams, teamMode };
+    const json = JSON.stringify(exportData, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

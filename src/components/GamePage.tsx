@@ -10,7 +10,7 @@ export default function GamePage() {
   const players = useGameStore((s) => s.players);
   const teams = useGameStore((s) => s.teams);
   const teamMode = useGameStore((s) => s.teamMode);
-  const currentPlayerIndex = useGameStore((s) => s.currentPlayerIndex);
+  const getCurrentPlayer = useGameStore((s) => s.getCurrentPlayer);
   const selectQuestion = useGameStore((s) => s.selectQuestion);
   const resetGame = useGameStore((s) => s.resetGame);
   const nextPlayer = useGameStore((s) => s.nextPlayer);
@@ -20,8 +20,8 @@ export default function GamePage() {
   const [showScoreBoard, setShowScoreBoard] = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  const currentPlayer = players[currentPlayerIndex % Math.max(players.length, 1)];
-  const currentTeam = teams.find((t) => t.id === currentPlayer?.teamId);
+  const currentPlayer = getCurrentPlayer();
+  const currentTeam = currentPlayer ? teams.find((t) => t.id === currentPlayer.teamId) : undefined;
 
   // Build a unified set of point rows from all categories
   const allPoints = Array.from(

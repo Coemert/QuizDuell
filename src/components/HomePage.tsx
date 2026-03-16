@@ -2,11 +2,12 @@ import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Plus, Upload, Zap } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import type { QuizSet } from '../types';
+import type { QuizSet, QuizExport } from '../types';
 
 export default function HomePage() {
   const setPhase = useGameStore((s) => s.setPhase);
   const importQuizSet = useGameStore((s) => s.importQuizSet);
+  const importSession = useGameStore((s) => s.importSession);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function handleCreateNew() {
@@ -19,8 +20,13 @@ export default function HomePage() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const data = JSON.parse(ev.target?.result as string) as QuizSet;
-        importQuizSet(data);
+        const data = JSON.parse(ev.target?.result as string);
+        // New format has a nested `quizSet` key; legacy format is a bare QuizSet
+        if (data.quizSet) {
+          importSession(data as QuizExport);
+        } else {
+          importQuizSet(data as QuizSet);
+        }
         setPhase('setup');
       } catch {
         alert('Invalid quiz file. Please use a valid Quizduell JSON export.');

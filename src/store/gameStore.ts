@@ -11,6 +11,7 @@ import type {
   ScoreEntry,
   ActiveQuestion,
   QuestionPhase,
+  QuizExport,
 } from '../types';
 import { DEFAULT_POINT_VALUES, TEAM_COLORS, PLAYER_COLORS } from '../types';
 
@@ -59,6 +60,7 @@ interface GameStore {
 
   // Game state
   currentPlayerIndex: number;
+  currentTeamIndex: number;
   scoreHistory: ScoreEntry[];
   activeQuestion: ActiveQuestion | null;
   questionPhase: QuestionPhase | null;
@@ -78,6 +80,7 @@ interface GameStore {
   addQuestionToCategory: (categoryId: string) => void;
   removeQuestionFromCategory: (categoryId: string, questionId: string) => void;
   importQuizSet: (quiz: QuizSet) => void;
+  importSession: (data: QuizExport) => void;
 
   // --- Player/Team setup ---
   setTeamMode: (mode: TeamMode) => void;
@@ -114,6 +117,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   players: [],
   teams: [],
   currentPlayerIndex: 0,
+  currentTeamIndex: 0,
   scoreHistory: [],
   activeQuestion: null,
   questionPhase: null,
@@ -202,6 +206,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     })),
 
   importQuizSet: (quiz) => set({ quizSet: quiz }),
+  importSession: ({ quizSet, players, teams, teamMode }) =>
+    set({ quizSet, players, teams, teamMode }),
 
   // Player/Team
   setTeamMode: (teamMode) => set({ teamMode }),
@@ -259,6 +265,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       phase: 'game',
       currentPlayerIndex: 0,
+      currentTeamIndex: 0,
       scoreHistory: [],
       activeQuestion: null,
       questionPhase: null,
@@ -283,22 +290,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!s.activeQuestion) return;
     const { categoryId, categoryName, question } = s.activeQuestion;
     const currentPlayer = s.getCurrentPlayer();
-    if (!currentPlayer) return;
 
-    const team = s.getPlayerTeam(currentPlayer.id);
-    const entry: ScoreEntry = {
-      id: uuidv4(),
-      timestamp: Date.now(),
-      playerId: currentPlayer.id,
-      playerName: currentPlayer.name,
-      playerColor: currentPlayer.color,
-      teamId: team?.id,
-      teamName: team?.name,
-      categoryName,
-      points: question.points,
-      correct,
-      questionText: question.question,
-    };
+    const team = currentPlayer ? s.getPlayerTeam(currentPlayer.id) : undefined;
+    const newEntry: ScoreEntry | null = currentPlayer
+      ? {
+          id: uuidv4(),
+          timestamp: Date.now(),
+          playerId: currentPlayer.id,
+          playerName: currentPlayer.name,
+          playerColor: currentPlayer.color,
+          teamId: team?.id,
+          teamName: team?.name,
+          categoryName,
+          points: question.points,
+          correct,
+          questionText: question.question,
+        }
+      : null;
 
     // Mark question as answered
     const updatedCategories = s.quizSet.categories.map((c) =>
@@ -307,22 +315,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
             ...c,
             questions: c.questions.map((q) =>
               q.id === question.id
-                ? { ...q, answered: true, answeredBy: currentPlayer.id, answeredCorrectly: correct }
+                ? {
+                    ...q,
+                    answered: true,
+                    answeredBy: currentPlayer?.id,
+                    answeredCorrectly: correct,
+                  }
                 : q
             ),
           }
         : c
     );
 
-    // Advance to next player
-    const nextIndex = (s.currentPlayerIndex + 1) % Math.max(s.players.length, 1);
+    const isTeamMode = s.teamMode === 'teams' && s.teams.length > 0;
+    const nextPlayerIndex = !isTeamMode && currentPlayer
+      ? (s.currentPlayerIndex + 1) % Math.max(s.players.length, 1)
+      : s.currentPlayerIndex;
+    const nextTeamIndex = isTeamMode ? s.currentTeamIndex + 1 : s.currentTeamIndex;
 
     set({
-      scoreHistory: [entry, ...s.scoreHistory],
+      scoreHistory: newEntry ? [newEntry, ...s.scoreHistory] : s.scoreHistory,
       quizSet: { ...s.quizSet, categories: updatedCategories },
       activeQuestion: null,
       questionPhase: null,
-      currentPlayerIndex: nextIndex,
+      currentPlayerIndex: nextPlayerIndex,
+      currentTeamIndex: nextTeamIndex,
     });
   },
 
@@ -330,15 +347,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ activeQuestion: null, questionPhase: null }),
 
   nextPlayer: () =>
-    set((s) => ({
-      currentPlayerIndex: (s.currentPlayerIndex + 1) % Math.max(s.players.length, 1),
-    })),
+    set((s) => {
+      const isTeamMode = s.teamMode === 'teams' && s.teams.length > 0;
+      return {
+        currentPlayerIndex: !isTeamMode
+          ? (s.currentPlayerIndex + 1) % Math.max(s.players.length, 1)
+          : s.currentPlayerIndex,
+        currentTeamIndex: isTeamMode ? s.currentTeamIndex + 1 : s.currentTeamIndex,
+      };
+    }),
 
   resetGame: () =>
     set((s) => ({
       phase: 'setup',
       scoreHistory: [],
       currentPlayerIndex: 0,
+      currentTeamIndex: 0,
       activeQuestion: null,
       questionPhase: null,
       // Reset answered flags
@@ -370,6 +394,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
   getCurrentPlayer: () => {
     const s = get();
     if (s.players.length === 0) return null;
+    if (s.teamMode === 'teams' && s.teams.length > 0) {
+      const team = s.teams[s.currentTeamIndex % s.teams.length];
+      if (!team) return null;
+      const teamPlayers = s.players.filter((p) => p.teamId === team.id);
+      if (teamPlayers.length === 0) return null;
+      // Rotate through team members using how many times this team has answered
+      const teamAnswerCount = s.scoreHistory.filter((e) => e.teamId === team.id).length;
+      return teamPlayers[teamAnswerCount % teamPlayers.length] ?? null;
+    }
     return s.players[s.currentPlayerIndex % s.players.length] ?? null;
   },
 
