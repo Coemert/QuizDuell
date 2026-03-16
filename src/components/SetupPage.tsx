@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, Download, Plus, Trash2, Users, ClipboardList,
-  Play, ChevronDown, ChevronUp, Clock, RotateCcw
+  Play, ChevronDown, ChevronUp, Clock, RotateCcw, ImageIcon
 } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import type { Category, Question } from '../types';
@@ -36,6 +36,17 @@ function QuestionRow({
   const [expanded, setExpanded] = useState(false);
   const defaultTimer = useGameStore((s) => s.quizSet.defaultTimerSeconds);
   const hasCustomTimer = question.timerSeconds !== undefined;
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onUpdate({ imageDataUrl: reader.result as string });
+    reader.readAsDataURL(file);
+    // Reset so the same file can be re-selected if removed
+    e.target.value = '';
+  }
 
   return (
     <div className="border border-border rounded-xl bg-base overflow-hidden">
@@ -153,6 +164,39 @@ function QuestionRow({
                   rows={2}
                   className={inputCls + ' resize-none'}
                 />
+              </div>
+              <div>
+                <label className="font-ui text-xs text-text-muted block mb-1.5">Image (optional)</label>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept=".gif,.png,.jpeg,.jpg"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+                {question.imageDataUrl ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={question.imageDataUrl}
+                      alt="Question"
+                      className="max-h-40 rounded-lg border border-border object-contain"
+                    />
+                    <button
+                      onClick={() => onUpdate({ imageDataUrl: undefined })}
+                      className="absolute top-1 right-1 p-1 rounded-lg bg-base/90 text-text-muted hover:text-red hover:bg-red/10 transition-colors"
+                      title="Remove image"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => imageInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-border text-text-muted font-ui text-sm hover:border-gold/40 hover:text-gold/70 transition-colors"
+                  >
+                    <ImageIcon className="w-4 h-4" /> Upload Image
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>

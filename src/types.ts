@@ -8,6 +8,7 @@ export interface Question {
   points: number;
   question: string;
   answer: string;
+  imageDataUrl?: string; // base64-encoded image (gif/png/jpeg)
   timerSeconds?: number; // overrides default if set
   answered: boolean;
   answeredBy?: string; // player id

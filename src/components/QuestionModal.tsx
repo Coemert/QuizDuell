@@ -87,7 +87,7 @@ export default function QuestionModal() {
 
           {/* Modal */}
           <motion.div
-            className="relative w-full max-w-2xl bg-card border border-border rounded-3xl overflow-hidden"
+            className="relative w-full max-w-3xl bg-card border border-border rounded-3xl overflow-hidden"
             initial={{ scale: 0.9, y: 30, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.9, y: 30, opacity: 0 }}
@@ -173,7 +173,14 @@ export default function QuestionModal() {
               )}
 
               {/* Question */}
-              <div className="mb-6 p-6 rounded-2xl bg-elevated border border-border min-h-[100px] flex items-center justify-center">
+              <div className="mb-6 p-6 rounded-2xl bg-elevated border border-border min-h-[100px] flex flex-col items-center justify-center gap-4">
+                {activeQuestion.question.imageDataUrl && (
+                  <img
+                    src={activeQuestion.question.imageDataUrl}
+                    alt="Question"
+                    className="max-h-64 max-w-full rounded-xl object-contain"
+                  />
+                )}
                 <p className="font-ui text-xl text-text-primary text-center leading-relaxed">
                   {activeQuestion.question.question || (
                     <span className="text-text-muted italic">No question text provided.</span>
