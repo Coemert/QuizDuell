@@ -1,25 +1,36 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, RotateCcw, ChevronRight, PanelRight, PanelRightClose } from 'lucide-react';
+import { Settings, RotateCcw, ChevronRight, PanelRight, PanelRightClose, Undo2 } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import QuestionModal from './QuestionModal';
 import ScoreBoard from './ScoreBoard';
 import VictoryScreen from './VictoryScreen';
 
+interface PendingCell {
+  categoryId: string;
+  questionId: string;
+  categoryName: string;
+  points: number;
+  hasOptions: boolean;
+}
+
 export default function GamePage() {
-  const quizSet        = useGameStore((s) => s.quizSet);
-  const players        = useGameStore((s) => s.players);
-  const teams          = useGameStore((s) => s.teams);
-  const teamMode       = useGameStore((s) => s.teamMode);
+  const quizSet          = useGameStore((s) => s.quizSet);
+  const players          = useGameStore((s) => s.players);
+  const teams            = useGameStore((s) => s.teams);
+  const teamMode         = useGameStore((s) => s.teamMode);
   const getCurrentPlayer = useGameStore((s) => s.getCurrentPlayer);
-  const selectQuestion = useGameStore((s) => s.selectQuestion);
-  const resetGame      = useGameStore((s) => s.resetGame);
-  const nextPlayer     = useGameStore((s) => s.nextPlayer);
-  const activeQuestion = useGameStore((s) => s.activeQuestion);
+  const selectQuestion   = useGameStore((s) => s.selectQuestion);
+  const resetGame        = useGameStore((s) => s.resetGame);
+  const nextPlayer       = useGameStore((s) => s.nextPlayer);
+  const activeQuestion   = useGameStore((s) => s.activeQuestion);
+  const scoreHistory     = useGameStore((s) => s.scoreHistory);
+  const undoLastAnswer   = useGameStore((s) => s.undoLastAnswer);
 
   const [showScoreBoard,   setShowScoreBoard]   = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showVictory,      setShowVictory]      = useState(false);
+  const [pendingCell,      setPendingCell]      = useState<PendingCell | null>(null);
 
   const currentPlayer = getCurrentPlayer();
   const currentTeam   = currentPlayer ? teams.find((t) => t.id === currentPlayer.teamId) : undefined;
@@ -44,7 +55,16 @@ export default function GamePage() {
 
   function handleCellClick(categoryId: string, questionId: string) {
     if (activeQuestion) return;
-    selectQuestion(categoryId, questionId);
+    const cat = quizSet.categories.find((c) => c.id === categoryId);
+    const q   = cat?.questions.find((q) => q.id === questionId);
+    if (!cat || !q) return;
+    setPendingCell({
+      categoryId,
+      questionId,
+      categoryName: cat.name,
+      points:       q.points,
+      hasOptions:   (q.options?.length ?? 0) > 0,
+    });
   }
 
   return (
@@ -88,6 +108,17 @@ export default function GamePage() {
         )}
 
         <div className="flex items-center gap-2 shrink-0">
+          {scoreHistory.length > 0 && (
+            <button
+              onClick={undoLastAnswer}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-elevated
+                text-text-secondary hover:text-gold hover:border-gold/30 transition-colors text-sm font-ui"
+              title={`Undo: ${scoreHistory[0].playerName} — ${scoreHistory[0].categoryName} ${scoreHistory[0].points}pts`}
+            >
+              <Undo2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Undo</span>
+            </button>
+          )}
           <button
             onClick={() => setShowResetConfirm(true)}
             className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-elevated
@@ -193,18 +224,26 @@ export default function GamePage() {
                           {question.answeredCorrectly ? '✓' : '✗'}
                         </div>
                         {answeredPlayer && (
-                          <div className="font-ui text-[11px] md:text-sm text-text-muted text-center leading-tight max-w-full truncate">
+                          <div className="font-ui text-sm md:text-base text-text-muted text-center leading-tight max-w-full truncate">
                             {answeredPlayer.name}
                           </div>
                         )}
                       </div>
                     ) : (
-                      <span
-                        className="font-display text-3xl md:text-4xl select-none"
-                        style={{ color: '#f0b429', textShadow: '0 0 12px rgba(240,180,41,0.35)' }}
-                      >
-                        {question.points}
-                      </span>
+                      <>
+                        {question.options && question.options.length > 0 && (
+                          <span className="absolute top-1.5 right-1.5 font-mono text-[9px] font-bold tracking-wider
+                            text-gold/70 bg-gold/10 rounded px-1 py-0.5 leading-none pointer-events-none">
+                            SELECT
+                          </span>
+                        )}
+                        <span
+                          className="font-display text-3xl md:text-4xl select-none"
+                          style={{ color: '#f0b429', textShadow: '0 0 12px rgba(240,180,41,0.35)' }}
+                        >
+                          {question.points}
+                        </span>
+                      </>
                     )}
                   </motion.button>
                 );
@@ -259,6 +298,70 @@ export default function GamePage() {
             onClose={() => setShowVictory(false)}
             onPlayAgain={() => { setShowVictory(false); resetGame(); }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Question confirm */}
+      <AnimatePresence>
+        {pendingCell && (
+          <motion.div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1,    opacity: 1 }}
+              exit={{    scale: 0.92, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+            >
+              <div className="font-mono text-xs text-text-muted uppercase tracking-widest mb-1">
+                {pendingCell.categoryName}
+                {pendingCell.hasOptions && (
+                  <span className="ml-2 text-gold/70 bg-gold/10 px-1.5 py-0.5 rounded text-[9px] font-bold">MC</span>
+                )}
+              </div>
+              <div
+                className="font-display text-6xl mb-3"
+                style={{ color: '#f0b429' }}
+              >
+                {pendingCell.points}
+              </div>
+              {currentPlayer && (
+                <p className="font-ui text-text-secondary text-sm mb-5">
+                  Opening for{' '}
+                  <span
+                    className="font-semibold"
+                    style={{ color: currentTeam?.color ?? currentPlayer.color }}
+                  >
+                    {currentPlayer.name}
+                  </span>
+                  {currentTeam && <span className="text-text-muted"> ({currentTeam.name})</span>}
+                </p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPendingCell(null)}
+                  className="flex-1 py-3 rounded-xl border border-border bg-elevated text-text-primary font-ui font-medium text-sm
+                    hover:border-gold/30 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    selectQuestion(pendingCell.categoryId, pendingCell.questionId);
+                    setPendingCell(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-gold text-black font-ui font-semibold text-sm
+                    hover:brightness-110 transition-all"
+                >
+                  Show Question
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

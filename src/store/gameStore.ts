@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   AppPhase,
@@ -102,6 +103,7 @@ interface GameStore {
   nextPlayer: () => void;
   resetGame: () => void;
   shufflePlayerTeams: () => void;
+  undoLastAnswer: () => void;
 
   // --- Computed ---
   getPlayerScore: (playerId: string) => number;
@@ -110,7 +112,9 @@ interface GameStore {
   getPlayerTeam: (playerId: string) => Team | undefined;
 }
 
-export const useGameStore = create<GameStore>((set, get) => ({
+export const useGameStore = create<GameStore>()(
+  persist(
+  (set, get) => ({
   phase: 'home',
   setupTab: 'quiz',
   quizSet: createDefaultQuizSet(),
@@ -312,7 +316,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           playerColor: currentPlayer.color,
           teamId: team?.id,
           teamName: team?.name,
+          categoryId,
           categoryName,
+          questionId: question.id,
           points: question.points,
           correct,
           questionText: question.question,
@@ -424,6 +430,36 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return s.teams.find((t) => t.id === player.teamId);
   },
 
+  undoLastAnswer: () => {
+    const s = get();
+    if (s.scoreHistory.length === 0) return;
+    const last = s.scoreHistory[0];
+
+    // Un-mark the question
+    const updatedCategories = s.quizSet.categories.map((c) =>
+      c.id === last.categoryId
+        ? {
+            ...c,
+            questions: c.questions.map((q) =>
+              q.id === last.questionId
+                ? { ...q, answered: false, answeredBy: undefined, answeredCorrectly: undefined }
+                : q
+            ),
+          }
+        : c
+    );
+
+    const isTeamMode = s.teamMode === 'teams' && s.teams.length > 0;
+    set({
+      scoreHistory: s.scoreHistory.slice(1),
+      quizSet: { ...s.quizSet, categories: updatedCategories },
+      currentPlayerIndex: !isTeamMode
+        ? (s.currentPlayerIndex - 1 + Math.max(s.players.length, 1)) % Math.max(s.players.length, 1)
+        : s.currentPlayerIndex,
+      currentTeamIndex: isTeamMode ? Math.max(s.currentTeamIndex - 1, 0) : s.currentTeamIndex,
+    });
+  },
+
   shufflePlayerTeams: () => {
     const s = get();
     if (s.teams.length === 0) return;
@@ -445,4 +481,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const shuffled = [...s.players].sort(() => Math.random() - 0.5);
     set({ players: shuffled.map((p, i) => ({ ...p, teamId: slots[i] })) });
   },
-}));
+  }),
+  {
+    name: 'saltquiz-state',
+    // Only persist meaningful state — skip transient modal state
+    partialize: (state) => ({
+      phase:              state.phase,
+      setupTab:           state.setupTab,
+      quizSet:            state.quizSet,
+      teamMode:           state.teamMode,
+      players:            state.players,
+      teams:              state.teams,
+      currentPlayerIndex: state.currentPlayerIndex,
+      currentTeamIndex:   state.currentTeamIndex,
+      scoreHistory:       state.scoreHistory,
+    }),
+  }
+));

@@ -3,6 +3,7 @@ import { useGameStore } from './store/gameStore';
 import HomePage from './components/HomePage';
 import SetupPage from './components/SetupPage';
 import GamePage from './components/GamePage';
+import ThemeSwitcher from './components/ThemeSwitcher';
 
 const pageVariants = {
   initial: { opacity: 0, y: 16 },
@@ -19,7 +20,7 @@ export default function App() {
       <div
         className="pointer-events-none fixed top-0 left-0 right-0 h-64 opacity-20"
         style={{
-          background: 'radial-gradient(ellipse at 50% -20%, #f0b42955 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse at 50% -20%, rgb(var(--color-gold) / 0.33) 0%, transparent 70%)',
         }}
       />
 
@@ -40,6 +41,8 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ThemeSwitcher />
     </div>
   );
 }

@@ -67,7 +67,7 @@ function QuestionRow({
           </span>
         )}
         {question.options && (
-          <span className="text-xs font-mono text-gold bg-gold/10 px-2 py-0.5 rounded-full shrink-0">MC</span>
+          <span className="text-xs font-mono text-gold bg-gold/10 px-2 py-0.5 rounded-full shrink-0">SELECT</span>
         )}
         {open ? <ChevronUp className="w-4 h-4 text-text-muted shrink-0" /> : <ChevronDown className="w-4 h-4 text-text-muted shrink-0" />}
         <button

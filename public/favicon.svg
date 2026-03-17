@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Dark card background -->
+  <rect width="32" height="32" rx="7" fill="#0f1829"/>
+  <!-- Subtle border glow -->
+  <rect x="0.75" y="0.75" width="30.5" height="30.5" rx="6.4" stroke="#f0b429" stroke-width="0.5" opacity="0.35"/>
+  <!-- Gold question mark — arc -->
+  <path d="M11.5 13.5a4.5 4.5 0 0 1 9 0c0 2.8-3.5 3.8-3.5 6.5"
+        stroke="#f0b429" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+  <!-- Gold question mark — dot -->
+  <circle cx="16" cy="25.5" r="1.8" fill="#f0b429"/>
+</svg>

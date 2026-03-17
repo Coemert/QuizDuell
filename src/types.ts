@@ -50,7 +50,9 @@ export interface ScoreEntry {
   playerColor: string;
   teamId?: string;
   teamName?: string;
+  categoryId: string;
   categoryName: string;
+  questionId: string;
   points: number;
   correct: boolean;
   questionText: string;

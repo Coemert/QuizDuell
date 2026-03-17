@@ -97,8 +97,7 @@ export default function VictoryScreen({ onClose, onPlayAgain }: Props) {
           className="mb-8"
         >
           <div
-            className="font-display text-6xl md:text-8xl victory-glow select-none"
-            style={{ color: '#f0b429' }}
+            className="font-display text-6xl md:text-8xl text-gold victory-glow select-none"
           >
             GAME OVER
           </div>
@@ -264,9 +263,9 @@ export default function VictoryScreen({ onClose, onPlayAgain }: Props) {
             className="flex items-center gap-2 px-8 py-3.5 rounded-xl font-ui font-semibold text-base transition-all
               hover:brightness-110 active:scale-95"
             style={{
-              background:  'linear-gradient(135deg,#f0b429,#d97706)',
-              color:       'black',
-              boxShadow:   '0 0 20px rgba(240,180,41,0.45)',
+              background: 'linear-gradient(135deg, rgb(var(--color-gold)), rgb(var(--color-gold-light)))',
+              color:      'black',
+              boxShadow:  '0 0 20px rgb(var(--color-gold) / 0.45)',
             }}
           >
             <RotateCcw className="w-5 h-5" />
