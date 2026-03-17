@@ -320,7 +320,7 @@ export default function GamePage() {
               <div className="font-mono text-2xl text-text-muted uppercase tracking-widest mb-1" style={{textAlign: 'center'}}>
                 {pendingCell.categoryName}
                 {pendingCell.hasOptions && (
-                  <span className="ml-2 text-gold/70 bg-gold/10 px-1.5 py-0.5 rounded text-[9px] font-bold">MC</span>
+                  <span className="ml-2 text-gold/70 bg-gold/10 px-1.5 py-0.5 rounded text-[9px] font-bold">SELECT</span>
                 )}
               </div>
               <div
