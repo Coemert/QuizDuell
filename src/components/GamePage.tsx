@@ -219,12 +219,12 @@ export default function GamePage() {
                     }}
                   >
                     {isAnswered ? (
-                      <div className="flex flex-col items-center gap-1 px-1">
-                        <div className={`font-display text-4xl md:text-5xl ${question.answeredCorrectly ? 'text-green' : 'text-red'}`}>
+                      <div className="flex flex-col items-center gap-1 px-1 w-full">
+                        <div className={`font-display text-3xl md:text-4xl lg:text-5xl ${question.answeredCorrectly ? 'text-green' : 'text-red'}`}>
                           {question.answeredCorrectly ? '✓' : '✗'}
                         </div>
                         {answeredPlayer && (
-                          <div className="font-ui text-sm md:text-base text-text-muted text-center leading-tight max-w-full truncate">
+                          <div className="font-ui text-xs md:text-sm text-text-muted text-center leading-tight w-full truncate">
                             {answeredPlayer.name}
                           </div>
                         )}
