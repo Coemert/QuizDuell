@@ -317,7 +317,7 @@ export default function GamePage() {
               exit={{    scale: 0.92, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 320, damping: 24 }}
             >
-              <div className="font-mono text-xs text-text-muted uppercase tracking-widest mb-1">
+              <div className="font-mono text-2xl text-text-muted uppercase tracking-widest mb-1" style={{textAlign: 'center'}}>
                 {pendingCell.categoryName}
                 {pendingCell.hasOptions && (
                   <span className="ml-2 text-gold/70 bg-gold/10 px-1.5 py-0.5 rounded text-[9px] font-bold">MC</span>
@@ -325,12 +325,12 @@ export default function GamePage() {
               </div>
               <div
                 className="font-display text-6xl mb-3"
-                style={{ color: '#f0b429' }}
+                style={{ color: '#f0b429', textAlign: 'center' }}
               >
                 {pendingCell.points}
               </div>
               {currentPlayer && (
-                <p className="font-ui text-text-secondary text-sm mb-5">
+                <p className="font-ui text-text-secondary text-sm mb-5" style={{textAlign: 'center'}}>
                   Opening for{' '}
                   <span
                     className="font-semibold"
