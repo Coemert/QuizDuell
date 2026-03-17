@@ -2,15 +2,16 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, Download, Plus, Trash2, Users, ClipboardList,
-  Play, ChevronDown, ChevronUp, Clock, RotateCcw, ImageIcon, ListChecks
+  Play, ChevronDown, ChevronUp, Clock, RotateCcw, ImageIcon,
+  ListChecks, X, Shuffle,
 } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import type { Category, Question, QuizExport } from '../types';
 import { TEAM_COLORS, PLAYER_COLORS } from '../types';
 
-// ─── Shared input styles ──────────────────────────────────────────
+// ─── Shared styles ─────────────────────────────────────────────
 const inputCls =
-  'w-full bg-base border border-border rounded-lg px-3 py-2 text-text-primary font-ui text-sm ' +
+  'w-full bg-base border border-border rounded-lg px-3 py-2.5 text-text-primary font-ui text-sm ' +
   'focus:outline-none focus:border-gold/60 placeholder-text-muted transition-colors';
 
 const btnPrimary =
@@ -18,25 +19,22 @@ const btnPrimary =
   'hover:bg-gold-light transition-colors shadow-[0_0_12px_rgba(240,180,41,0.3)]';
 
 const btnSecondary =
-  'flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-elevated text-text-primary font-ui text-sm ' +
+  'flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-elevated text-text-primary font-ui text-sm ' +
   'hover:border-gold/40 hover:bg-card transition-colors';
 
-// ─── Question Row ─────────────────────────────────────────────────
+// ─── Question Row ───────────────────────────────────────────────
 function QuestionRow({
-  question,
-  categoryId,
-  onUpdate,
-  onRemove,
+  question, categoryId, onUpdate, onRemove,
 }: {
-  question: Question;
-  categoryId: string;
-  onUpdate: (patch: Partial<Question>) => void;
-  onRemove: () => void;
+  question:    Question;
+  categoryId?: string;
+  onUpdate:    (patch: Partial<Question>) => void;
+  onRemove:    () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [open, setOpen] = useState(false);
   const defaultTimer = useGameStore((s) => s.quizSet.defaultTimerSeconds);
   const hasCustomTimer = question.timerSeconds !== undefined;
-  const imageInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef  = useRef<HTMLInputElement>(null);
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -44,15 +42,15 @@ function QuestionRow({
     const reader = new FileReader();
     reader.onload = () => onUpdate({ imageDataUrl: reader.result as string });
     reader.readAsDataURL(file);
-    // Reset so the same file can be re-selected if removed
     e.target.value = '';
   }
 
   return (
     <div className="border border-border rounded-xl bg-base overflow-hidden">
+      {/* Collapsed header */}
       <div
         className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-elevated/40 transition-colors"
-        onClick={() => setExpanded((e) => !e)}
+        onClick={() => setOpen((v) => !v)}
       >
         <span
           className="font-display text-lg min-w-[52px] text-center rounded-lg px-2 py-0.5"
@@ -64,28 +62,24 @@ function QuestionRow({
           {question.question || <span className="italic text-text-muted">No question text</span>}
         </span>
         {hasCustomTimer && (
-          <span className="flex items-center gap-1 text-xs font-mono text-blue bg-blue/10 px-2 py-0.5 rounded-full">
+          <span className="flex items-center gap-1 text-xs font-mono text-blue bg-blue/10 px-2 py-0.5 rounded-full shrink-0">
             <Clock className="w-3 h-3" />{question.timerSeconds}s
           </span>
         )}
-        {expanded ? (
-          <ChevronUp className="w-4 h-4 text-text-muted" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-text-muted" />
+        {question.options && (
+          <span className="text-xs font-mono text-gold bg-gold/10 px-2 py-0.5 rounded-full shrink-0">MC</span>
         )}
+        {open ? <ChevronUp className="w-4 h-4 text-text-muted shrink-0" /> : <ChevronDown className="w-4 h-4 text-text-muted shrink-0" />}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          className="p-1.5 rounded-lg text-text-muted hover:text-red hover:bg-red/10 transition-colors"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="p-1.5 rounded-lg text-text-muted hover:text-red hover:bg-red/10 transition-colors shrink-0"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
       <AnimatePresence>
-        {expanded && (
+        {open && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -94,28 +88,29 @@ function QuestionRow({
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 pt-2 space-y-3 border-t border-border">
+
+              {/* 1. Points */}
               <div className="flex items-center gap-3">
                 <label className="font-ui text-xs text-text-muted w-20 shrink-0">Points</label>
                 <input
                   type="number"
                   value={question.points}
                   onChange={(e) => onUpdate({ points: Number(e.target.value) })}
-                  className={inputCls + ' w-24'}
+                  className={inputCls + ' w-28'}
                   min={10}
                   step={50}
                 />
               </div>
-              {/* Per-question timer override */}
+
+              {/* 2. Timer */}
               <div className="flex items-center gap-3">
                 <label className="font-ui text-xs text-text-muted w-20 shrink-0 flex items-center gap-1">
                   <Clock className="w-3 h-3" /> Timer
                 </label>
-                <div className="flex items-center gap-2 flex-1">
+                <div className="flex items-center gap-2 flex-1 flex-wrap">
                   <button
-                    onClick={() =>
-                      onUpdate({ timerSeconds: hasCustomTimer ? undefined : defaultTimer })
-                    }
-                    className={`text-xs px-2.5 py-1 rounded-lg font-ui font-medium transition-colors ${
+                    onClick={() => onUpdate({ timerSeconds: hasCustomTimer ? undefined : defaultTimer })}
+                    className={`text-sm px-3 py-1.5 rounded-lg font-ui font-medium transition-colors ${
                       hasCustomTimer
                         ? 'bg-blue/20 text-blue border border-blue/30'
                         : 'bg-elevated text-text-muted border border-border hover:border-gold/30'
@@ -129,7 +124,7 @@ function QuestionRow({
                         type="number"
                         value={question.timerSeconds}
                         onChange={(e) => onUpdate({ timerSeconds: Number(e.target.value) })}
-                        className={inputCls + ' w-20'}
+                        className={inputCls + ' w-24'}
                         min={5}
                         step={5}
                       />
@@ -145,32 +140,11 @@ function QuestionRow({
                   )}
                 </div>
               </div>
-              <div>
-                <label className="font-ui text-xs text-text-muted block mb-1.5">Question</label>
-                <textarea
-                  value={question.question}
-                  onChange={(e) => onUpdate({ question: e.target.value })}
-                  placeholder="Enter the question..."
-                  rows={2}
-                  className={inputCls + ' resize-none'}
-                />
-              </div>
-              {!question.options && (
-                <div>
-                  <label className="font-ui text-xs text-text-muted block mb-1.5">Answer</label>
-                  <textarea
-                    value={question.answer}
-                    onChange={(e) => onUpdate({ answer: e.target.value })}
-                    placeholder="Enter the answer..."
-                    rows={2}
-                    className={inputCls + ' resize-none'}
-                  />
-                </div>
-              )}
-              {/* Selection mode toggle */}
+
+              {/* 3. Multiple choice toggle — MOVED UP so you decide question type first */}
               <div className="flex items-center gap-3">
                 <label className="font-ui text-xs text-text-muted w-20 shrink-0 flex items-center gap-1">
-                  <ListChecks className="w-3 h-3" /> Options
+                  <ListChecks className="w-3 h-3" /> Type
                 </label>
                 <button
                   onClick={() => {
@@ -180,17 +154,17 @@ function QuestionRow({
                       onUpdate({ options: ['', ''], correctOptionIndex: 0 });
                     }
                   }}
-                  className={`text-xs px-2.5 py-1 rounded-lg font-ui font-medium transition-colors ${
+                  className={`text-sm px-3 py-1.5 rounded-lg font-ui font-medium transition-colors ${
                     question.options
                       ? 'bg-gold/20 text-gold border border-gold/30'
                       : 'bg-elevated text-text-muted border border-border hover:border-gold/30'
                   }`}
                 >
-                  {question.options ? 'Selection ON' : 'Add Selection'}
+                  {question.options ? 'Selection ON ✓' : 'Add Selection'}
                 </button>
               </div>
 
-              {/* Options editor */}
+              {/* 3b. Options editor */}
               {question.options && (
                 <div className="space-y-2 pl-0">
                   {question.options.map((opt, idx) => (
@@ -198,13 +172,13 @@ function QuestionRow({
                       <button
                         onClick={() => onUpdate({ correctOptionIndex: idx })}
                         title="Mark as correct answer"
-                        className={`w-7 h-7 rounded-lg border-2 shrink-0 flex items-center justify-center font-display text-xs font-bold transition-colors ${
+                        className={`w-8 h-8 rounded-lg border-2 shrink-0 flex items-center justify-center font-display text-sm font-bold transition-colors ${
                           question.correctOptionIndex === idx
                             ? 'border-green bg-green/20 text-green'
                             : 'border-border text-text-muted hover:border-gold/40 hover:text-gold'
                         }`}
                       >
-                        {['A', 'B', 'C', 'D'][idx]}
+                        {['A','B','C','D'][idx]}
                       </button>
                       <input
                         value={opt}
@@ -213,20 +187,15 @@ function QuestionRow({
                           next[idx] = e.target.value;
                           onUpdate({ options: next });
                         }}
-                        placeholder={`Option ${['A', 'B', 'C', 'D'][idx]}...`}
+                        placeholder={`Option ${['A','B','C','D'][idx]}…`}
                         className={inputCls}
                       />
                       {question.options!.length > 2 && (
                         <button
                           onClick={() => {
-                            const next = question.options!.filter((_, i) => i !== idx);
+                            const next       = question.options!.filter((_, i) => i !== idx);
                             const prevCorrect = question.correctOptionIndex ?? 0;
-                            const newCorrect =
-                              prevCorrect === idx
-                                ? 0
-                                : prevCorrect > idx
-                                ? prevCorrect - 1
-                                : prevCorrect;
+                            const newCorrect  = prevCorrect === idx ? 0 : prevCorrect > idx ? prevCorrect - 1 : prevCorrect;
                             onUpdate({ options: next, correctOptionIndex: newCorrect });
                           }}
                           className="p-1.5 rounded-lg text-text-muted hover:text-red hover:bg-red/10 transition-colors shrink-0"
@@ -247,6 +216,33 @@ function QuestionRow({
                 </div>
               )}
 
+              {/* 4. Question text */}
+              <div>
+                <label className="font-ui text-xs text-text-muted block mb-1.5">Question</label>
+                <textarea
+                  value={question.question}
+                  onChange={(e) => onUpdate({ question: e.target.value })}
+                  placeholder="Enter the question…"
+                  rows={2}
+                  className={inputCls + ' resize-none'}
+                />
+              </div>
+
+              {/* 5. Answer (free-response only) */}
+              {!question.options && (
+                <div>
+                  <label className="font-ui text-xs text-text-muted block mb-1.5">Answer</label>
+                  <textarea
+                    value={question.answer}
+                    onChange={(e) => onUpdate({ answer: e.target.value })}
+                    placeholder="Enter the answer…"
+                    rows={2}
+                    className={inputCls + ' resize-none'}
+                  />
+                </div>
+              )}
+
+              {/* 6. Image */}
               <div>
                 <label className="font-ui text-xs text-text-muted block mb-1.5">Image (optional)</label>
                 <input
@@ -288,18 +284,17 @@ function QuestionRow({
   );
 }
 
-// ─── Category Card ─────────────────────────────────────────────────
+// ─── Category Card ──────────────────────────────────────────────
 function CategoryCard({ category }: { category: Category }) {
-  const [expanded, setExpanded] = useState(true);
-  const updateCategoryName = useGameStore((s) => s.updateCategoryName);
-  const removeCategory = useGameStore((s) => s.removeCategory);
-  const updateQuestion = useGameStore((s) => s.updateQuestion);
-  const addQuestion = useGameStore((s) => s.addQuestionToCategory);
-  const removeQuestion = useGameStore((s) => s.removeQuestionFromCategory);
+  const [expanded, setExpanded]   = useState(true);
+  const updateCategoryName        = useGameStore((s) => s.updateCategoryName);
+  const removeCategory            = useGameStore((s) => s.removeCategory);
+  const updateQuestion            = useGameStore((s) => s.updateQuestion);
+  const addQuestion               = useGameStore((s) => s.addQuestionToCategory);
+  const removeQuestion            = useGameStore((s) => s.removeQuestionFromCategory);
 
   return (
     <div className="border border-border rounded-2xl bg-card overflow-hidden">
-      {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-elevated/40">
         <input
           value={category.name}
@@ -308,7 +303,7 @@ function CategoryCard({ category }: { category: Category }) {
           placeholder="Category Name"
         />
         <button
-          onClick={() => setExpanded((e) => !e)}
+          onClick={() => setExpanded((v) => !v)}
           className="p-1.5 text-text-muted hover:text-text-primary transition-colors"
         >
           {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -345,7 +340,7 @@ function CategoryCard({ category }: { category: Category }) {
                 ))}
               <button
                 onClick={() => addQuestion(category.id)}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-border text-text-muted font-ui text-sm hover:border-gold/40 hover:text-gold/70 transition-colors mt-2"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border text-text-muted font-ui text-sm hover:border-gold/40 hover:text-gold/70 transition-colors mt-2"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Question
               </button>
@@ -357,23 +352,23 @@ function CategoryCard({ category }: { category: Category }) {
   );
 }
 
-// ─── Quiz Editor Tab ───────────────────────────────────────────────
+// ─── Quiz Editor Tab ────────────────────────────────────────────
 function QuizEditorTab() {
-  const quizSet = useGameStore((s) => s.quizSet);
-  const players = useGameStore((s) => s.players);
-  const teams = useGameStore((s) => s.teams);
-  const teamMode = useGameStore((s) => s.teamMode);
-  const setQuizName = useGameStore((s) => s.setQuizName);
+  const quizSet        = useGameStore((s) => s.quizSet);
+  const players        = useGameStore((s) => s.players);
+  const teams          = useGameStore((s) => s.teams);
+  const teamMode       = useGameStore((s) => s.teamMode);
+  const setQuizName    = useGameStore((s) => s.setQuizName);
   const setTimerSeconds = useGameStore((s) => s.setTimerSeconds);
-  const addCategory = useGameStore((s) => s.addCategory);
+  const addCategory    = useGameStore((s) => s.addCategory);
 
   function handleExport() {
     const exportData: QuizExport = { quizSet, players, teams, teamMode };
     const json = JSON.stringify(exportData, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
     a.download = `${quizSet.name.replace(/\s+/g, '_') || 'quiz'}.json`;
     a.click();
     URL.revokeObjectURL(url);
@@ -381,10 +376,9 @@ function QuizEditorTab() {
 
   return (
     <div className="space-y-6">
-      {/* Quiz Meta */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl border border-border bg-card">
         <div>
-          <label className="font-ui text-xs text-text-muted block mb-1.5">Quiz Name</label>
+          <label className="font-ui text-sm text-text-muted block mb-1.5">Quiz Name</label>
           <input
             value={quizSet.name}
             onChange={(e) => setQuizName(e.target.value)}
@@ -393,7 +387,7 @@ function QuizEditorTab() {
           />
         </div>
         <div>
-          <label className="font-ui text-xs text-text-muted flex items-center justify-between mb-1.5">
+          <label className="font-ui text-sm text-text-muted flex items-center justify-between mb-1.5">
             <span>Default Timer</span>
             <span className="text-gold font-semibold">{quizSet.defaultTimerSeconds}s</span>
           </label>
@@ -409,7 +403,6 @@ function QuizEditorTab() {
         </div>
       </div>
 
-      {/* Export */}
       <div className="flex justify-between items-center">
         <h3 className="font-display text-2xl text-text-primary">
           Categories
@@ -427,7 +420,6 @@ function QuizEditorTab() {
         </div>
       </div>
 
-      {/* Categories */}
       <div className="space-y-4">
         {quizSet.categories.map((cat) => (
           <CategoryCard key={cat.id} category={cat} />
@@ -442,41 +434,276 @@ function QuizEditorTab() {
   );
 }
 
-// ─── Players Tab ───────────────────────────────────────────────────
-function PlayersTab() {
-  const teamMode = useGameStore((s) => s.teamMode);
-  const setTeamMode = useGameStore((s) => s.setTeamMode);
-  const players = useGameStore((s) => s.players);
-  const teams = useGameStore((s) => s.teams);
-  const addPlayer = useGameStore((s) => s.addPlayer);
-  const removePlayer = useGameStore((s) => s.removePlayer);
-  const updatePlayerName = useGameStore((s) => s.updatePlayerName);
-  const updatePlayerColor = useGameStore((s) => s.updatePlayerColor);
-  const assignPlayerTeam = useGameStore((s) => s.assignPlayerTeam);
-  const addTeam = useGameStore((s) => s.addTeam);
-  const removeTeam = useGameStore((s) => s.removeTeam);
-  const updateTeamName = useGameStore((s) => s.updateTeamName);
+// ─── Player Bubble ──────────────────────────────────────────────
+function PlayerBubble({
+  player, isSelected, isDragging,
+  onDragStart, onDragEnd, onClick, onRemove, onNameChange, onColorDotClick,
+}: {
+  player:           { id: string; name: string; color: string; teamId?: string };
+  isSelected:       boolean;
+  isDragging:       boolean;
+  onDragStart:      (e: React.DragEvent, id: string) => void;
+  onDragEnd:        () => void;
+  onClick:          (id: string) => void;
+  onRemove:         (id: string) => void;
+  onNameChange:     (id: string, name: string) => void;
+  onColorDotClick?: (id: string) => void;
+}) {
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, player.id)}
+      onDragEnd={onDragEnd}
+      onClick={() => onClick(player.id)}
+      className={`relative flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-full border-2
+        cursor-grab active:cursor-grabbing transition-all select-none
+        ${isSelected ? 'scale-105' : ''}
+        ${isDragging ? 'opacity-40 scale-95' : ''}`}
+      style={{
+        borderColor: isSelected ? '#f0b429' : player.color,
+        background:  player.color + '22',
+        boxShadow:   isSelected ? `0 0 14px rgba(240,180,41,0.5)` : undefined,
+      }}
+    >
+      {/* Color dot — acts as color-picker trigger */}
+      <button
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onColorDotClick?.(player.id); }}
+        title="Change color"
+        className="w-5 h-5 rounded-full shrink-0 ring-2 ring-transparent hover:ring-white/40 transition-all"
+        style={{ background: player.color }}
+      />
+      <input
+        value={player.name}
+        onChange={(e) => onNameChange(player.id, e.target.value)}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-transparent outline-none text-text-primary font-ui text-sm min-w-[40px]"
+        style={{ width: `${Math.max(40, player.name.length * 9)}px` }}
+      />
+      <button
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onRemove(player.id); }}
+        className="p-0.5 text-text-muted hover:text-red transition-colors shrink-0"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
 
-  const [newPlayerName, setNewPlayerName] = useState('');
-  const [newPlayerTeam, setNewPlayerTeam] = useState<string>('');
+// ─── Team Zone ──────────────────────────────────────────────────
+function TeamZone({
+  team, teamPlayers, selectedPlayerId, dragPlayerId, usedTeamColors,
+  onDragStart, onDragEnd, onDrop, onZoneClick, onBubbleClick,
+  onRemovePlayer, onNameChange, onUpdateTeamName, onRemoveTeam, onColorDotClick,
+}: {
+  team:              { id: string; name: string; color: string };
+  teamPlayers:       { id: string; name: string; color: string; teamId?: string }[];
+  selectedPlayerId:  string | null;
+  dragPlayerId:      string | null;
+  usedTeamColors:    string[];
+  onDragStart:       (e: React.DragEvent, id: string) => void;
+  onDragEnd:         () => void;
+  onDrop:            (e: React.DragEvent, teamId: string) => void;
+  onZoneClick:       (teamId: string) => void;
+  onBubbleClick:     (playerId: string) => void;
+  onRemovePlayer:    (id: string) => void;
+  onNameChange:      (id: string, name: string) => void;
+  onUpdateTeamName:  (id: string, name: string) => void;
+  onRemoveTeam:      (id: string) => void;
+  onColorDotClick:   (id: string) => void;
+}) {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const isAssignTarget = !!selectedPlayerId;
+
+  return (
+    <div
+      data-team-id={team.id}
+      className={`p-4 rounded-2xl border-2 transition-all duration-200 ${
+        isDragOver ? 'scale-[1.01]' : ''
+      }`}
+      style={{
+        borderColor: isDragOver || isAssignTarget ? team.color : '#1e3058',
+        background:  isDragOver ? team.color + '12' : undefined,
+        boxShadow:   isDragOver ? `0 0 16px ${team.color}40` : undefined,
+      }}
+      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false);
+      }}
+      onDrop={(e) => { onDrop(e, team.id); setIsDragOver(false); }}
+      onClick={() => isAssignTarget && onZoneClick(team.id)}
+    >
+      {/* Team header */}
+      <div className="flex items-center gap-2 mb-3" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="w-4 h-4 rounded-full shrink-0"
+          style={{ background: team.color, boxShadow: `0 0 6px ${team.color}80` }}
+        />
+        <input
+          value={team.name}
+          onChange={(e) => onUpdateTeamName(team.id, e.target.value)}
+          className="flex-1 bg-transparent font-display text-xl outline-none border-b border-transparent focus:border-gold/60 transition-colors pb-0.5 min-w-0"
+          style={{ color: team.color }}
+          placeholder="Team name"
+        />
+        <div className="flex gap-1 shrink-0">
+          {TEAM_COLORS.map((c) => {
+            const takenByOther = usedTeamColors.includes(c) && c !== team.color;
+            return (
+              <button
+                key={c}
+                disabled={takenByOther}
+                onClick={() =>
+                  !takenByOther &&
+                  useGameStore.setState((s) => ({
+                    teams: s.teams.map((t) => (t.id === team.id ? { ...t, color: c } : t)),
+                  }))
+                }
+                title={takenByOther ? 'Already used by another team' : undefined}
+                className={`w-4 h-4 rounded-full border-2 transition-all ${
+                  takenByOther
+                    ? 'opacity-20 cursor-not-allowed'
+                    : 'hover:scale-110 cursor-pointer'
+                }`}
+                style={{ background: c, borderColor: team.color === c ? 'white' : 'transparent' }}
+              />
+            );
+          })}
+        </div>
+        <button
+          onClick={() => onRemoveTeam(team.id)}
+          className="p-1.5 rounded-lg text-text-muted hover:text-red hover:bg-red/10 transition-colors shrink-0"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Players */}
+      <div
+        className="flex flex-wrap gap-2 min-h-[52px] rounded-xl p-2 transition-all"
+        style={{ background: isDragOver ? team.color + '08' : 'rgba(0,0,0,0.15)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {teamPlayers.map((p) => (
+          <PlayerBubble
+            key={p.id}
+            player={p}
+            isSelected={selectedPlayerId === p.id}
+            isDragging={dragPlayerId === p.id}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onClick={onBubbleClick}
+            onRemove={onRemovePlayer}
+            onNameChange={onNameChange}
+            onColorDotClick={onColorDotClick}
+          />
+        ))}
+        {teamPlayers.length === 0 && (
+          <p className="text-text-muted text-sm font-ui py-1 px-1 w-full text-center">
+            {isDragOver
+              ? '✓ Drop here'
+              : isAssignTarget
+              ? 'Tap here to assign selected player'
+              : 'Drag players here or select & tap'}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Players Tab ────────────────────────────────────────────────
+function PlayersTab() {
+  const teamMode           = useGameStore((s) => s.teamMode);
+  const setTeamMode        = useGameStore((s) => s.setTeamMode);
+  const players            = useGameStore((s) => s.players);
+  const teams              = useGameStore((s) => s.teams);
+  const addPlayer          = useGameStore((s) => s.addPlayer);
+  const removePlayer       = useGameStore((s) => s.removePlayer);
+  const updatePlayerName   = useGameStore((s) => s.updatePlayerName);
+  const updatePlayerColor  = useGameStore((s) => s.updatePlayerColor);
+  const assignPlayerTeam   = useGameStore((s) => s.assignPlayerTeam);
+  const addTeam            = useGameStore((s) => s.addTeam);
+  const removeTeam         = useGameStore((s) => s.removeTeam);
+  const updateTeamName     = useGameStore((s) => s.updateTeamName);
+  const shufflePlayerTeams = useGameStore((s) => s.shufflePlayerTeams);
+
+  const [newPlayerName,    setNewPlayerName]    = useState('');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [dragPlayerId,     setDragPlayerId]     = useState<string | null>(null);
+  // Shared color-picker state — null means closed
+  const [colorPickerId,    setColorPickerId]    = useState<string | null>(null);
 
   function handleAddPlayer() {
     if (!newPlayerName.trim()) return;
-    addPlayer(newPlayerName.trim(), newPlayerTeam || undefined);
+    addPlayer(newPlayerName.trim());
     setNewPlayerName('');
-    setNewPlayerTeam('');
   }
 
+  // ── Color picker helpers ──────────────────────────────────────
+  function openColorPicker(id: string) {
+    setColorPickerId((prev) => (prev === id ? null : id));
+    setSelectedPlayerId(null); // don't mix states
+  }
+  function closeColorPicker() { setColorPickerId(null); }
+
+  // ── Drag helpers ──────────────────────────────────────────────
+  function handleDragStart(e: React.DragEvent, id: string) {
+    e.dataTransfer.setData('playerId', id);
+    e.dataTransfer.effectAllowed = 'move';
+    setDragPlayerId(id);
+  }
+  function handleDragEnd() { setDragPlayerId(null); }
+
+  function handleDropOnTeam(e: React.DragEvent, teamId: string | null) {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('playerId');
+    if (id) assignPlayerTeam(id, teamId ?? undefined);
+    setDragPlayerId(null);
+  }
+  function handleDropOnPool(e: React.DragEvent) {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('playerId');
+    if (id) assignPlayerTeam(id, undefined);
+    setDragPlayerId(null);
+  }
+
+  // ── Team-assignment tap helpers ───────────────────────────────
+  function handleBubbleClick(id: string) {
+    setColorPickerId(null);
+    setSelectedPlayerId((prev) => (prev === id ? null : id));
+  }
+  function handleZoneClick(teamId: string) {
+    if (!selectedPlayerId) return;
+    assignPlayerTeam(selectedPlayerId, teamId);
+    setSelectedPlayerId(null);
+  }
+  function handlePoolClick() {
+    if (!selectedPlayerId) return;
+    assignPlayerTeam(selectedPlayerId, undefined);
+    setSelectedPlayerId(null);
+  }
+
+  const unassigned = teamMode === 'teams' ? players.filter((p) => !p.teamId) : players;
+  const colorPickerPlayer = players.find((p) => p.id === colorPickerId);
+
+  // No-op drag handlers for individual mode (bubbles aren't dragged to teams)
+  const noopDragStart = (e: React.DragEvent, _id: string) => { e.preventDefault(); };
+  const noopDragEnd   = () => {};
+
   return (
-    <div className="space-y-6">
-      {/* Mode Toggle */}
+    <div className="space-y-5">
+
+      {/* Mode toggle */}
       <div className="p-5 rounded-2xl border border-border bg-card">
-        <label className="font-ui text-xs text-text-muted block mb-3">Game Mode</label>
+        <label className="font-ui text-sm text-text-muted block mb-3">Game Mode</label>
         <div className="flex gap-3">
           {(['individual', 'teams'] as const).map((mode) => (
             <button
               key={mode}
-              onClick={() => setTeamMode(mode)}
+              onClick={() => { setTeamMode(mode); setColorPickerId(null); setSelectedPlayerId(null); }}
               className={`flex-1 py-3 rounded-xl font-ui font-semibold text-sm transition-all ${
                 teamMode === mode
                   ? 'bg-gold text-black shadow-[0_0_12px_rgba(240,180,41,0.3)]'
@@ -489,189 +716,232 @@ function PlayersTab() {
         </div>
       </div>
 
-      {/* Teams section (only in team mode) */}
-      {teamMode === 'teams' && (
-        <div className="p-5 rounded-2xl border border-border bg-card space-y-3">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="font-display text-xl text-text-primary">Teams</h3>
-            <button onClick={addTeam} className={btnSecondary}>
-              <Plus className="w-4 h-4" /> Add Team
-            </button>
-          </div>
-          {teams.map((team) => (
-            <div key={team.id} className="flex items-center gap-3 p-3 rounded-xl bg-base border border-border">
-              <div
-                className="w-4 h-4 rounded-full shrink-0"
-                style={{ background: team.color, boxShadow: `0 0 6px ${team.color}80` }}
-              />
-              <input
-                value={team.name}
-                onChange={(e) => updateTeamName(team.id, e.target.value)}
-                className={inputCls}
-                placeholder="Team name"
-              />
-              <div className="flex gap-1 shrink-0">
-                {TEAM_COLORS.map((c) => (
+      {/* ── Shared color picker panel ── */}
+      <AnimatePresence>
+        {colorPickerPlayer && (
+          <motion.div
+            key="color-picker"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.18 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 rounded-2xl border border-gold/30 bg-gold/5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full shrink-0" style={{ background: colorPickerPlayer.color }} />
+                  <span className="font-ui text-sm text-gold">
+                    Color for <strong>{colorPickerPlayer.name}</strong>
+                  </span>
+                </div>
+                <button
+                  onClick={closeColorPicker}
+                  className="p-1 text-gold/60 hover:text-gold transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {PLAYER_COLORS.map((c) => (
                   <button
                     key={c}
-                    className="w-5 h-5 rounded-full border-2 transition-all hover:scale-110"
+                    onClick={() => { updatePlayerColor(colorPickerPlayer.id, c); closeColorPicker(); }}
+                    className="w-9 h-9 rounded-full transition-all hover:scale-110 active:scale-95"
                     style={{
-                      background: c,
-                      borderColor: team.color === c ? 'white' : 'transparent',
+                      background:  c,
+                      outline:     colorPickerPlayer.color === c ? `3px solid white` : '3px solid transparent',
+                      outlineOffset: '2px',
+                      boxShadow:   colorPickerPlayer.color === c ? `0 0 10px ${c}` : undefined,
                     }}
-                    onClick={() =>
-                      useGameStore.setState((s) => ({
-                        teams: s.teams.map((t) => (t.id === team.id ? { ...t, color: c } : t)),
-                      }))
-                    }
                   />
                 ))}
               </div>
-              <button
-                onClick={() => removeTeam(team.id)}
-                className="p-1.5 rounded-lg text-text-muted hover:text-red hover:bg-red/10 transition-colors shrink-0"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
             </div>
-          ))}
-          {teams.length === 0 && (
-            <p className="text-text-muted text-sm font-ui">Add teams above, then assign players below.</p>
-          )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add player */}
+      <div className="p-5 rounded-2xl border border-border bg-card">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-display text-xl text-text-primary">
+            Players
+            {players.length > 0 && (
+              <span className="ml-2 font-ui text-sm text-text-muted font-normal">{players.length} added</span>
+            )}
+          </h3>
+        </div>
+        <div className="flex gap-2">
+          <input
+            value={newPlayerName}
+            onChange={(e) => setNewPlayerName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
+            className={inputCls}
+            placeholder="Player name…"
+          />
+          <button onClick={handleAddPlayer} className={btnPrimary + ' shrink-0'}>
+            <Plus className="w-4 h-4" /> Add
+          </button>
+        </div>
+      </div>
+
+      {/* ── Individual mode: bubbles ── */}
+      {teamMode === 'individual' && players.length > 0 && (
+        <div className="p-4 rounded-2xl border border-border bg-card">
+          <p className="font-ui text-xs text-text-muted mb-3">
+            Tap the colored dot on any player to change their color.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {players.map((p) => (
+              <PlayerBubble
+                key={p.id}
+                player={p}
+                isSelected={colorPickerId === p.id}
+                isDragging={false}
+                onDragStart={noopDragStart}
+                onDragEnd={noopDragEnd}
+                // Clicking the bubble body also opens the color picker in individual mode
+                onClick={openColorPicker}
+                onRemove={removePlayer}
+                onNameChange={updatePlayerName}
+                onColorDotClick={openColorPicker}
+              />
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Players */}
-      <div className="p-5 rounded-2xl border border-border bg-card space-y-3">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="font-display text-xl text-text-primary">Players</h3>
-          <span className="text-text-muted text-sm font-ui">{players.length} added</span>
-        </div>
-
-        {/* Add player row — stacked layout to avoid squishing */}
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
-            <input
-              value={newPlayerName}
-              onChange={(e) => setNewPlayerName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
-              className={inputCls}
-              placeholder="Player name..."
-            />
-            <button onClick={handleAddPlayer} className={btnPrimary + ' shrink-0'}>
-              <Plus className="w-4 h-4" /> Add
-            </button>
-          </div>
-          {teamMode === 'teams' && teams.length > 0 && (
-            <select
-              value={newPlayerTeam}
-              onChange={(e) => setNewPlayerTeam(e.target.value)}
-              className={inputCls}
-            >
-              <option value="">No team assigned</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        {/* Player list */}
-        <div className="space-y-2">
-          {players.map((player, idx) => {
-            const team = teams.find((t) => t.id === player.teamId);
-            return (
-              <div
-                key={player.id}
-                className="p-3 rounded-xl bg-base border border-border space-y-2"
+      {/* ── Team mode: drag-drop bubble board ── */}
+      {teamMode === 'teams' && (
+        <>
+          {/* Selected-player hint */}
+          <AnimatePresence>
+            {selectedPlayerId && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gold/10 border border-gold/30"
               >
-                {/* Row 1: index + name + team select + delete */}
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-text-muted text-xs w-5 text-right shrink-0">{idx + 1}</span>
-                  <input
-                    value={player.name}
-                    onChange={(e) => updatePlayerName(player.id, e.target.value)}
-                    className="flex-1 bg-transparent text-text-primary font-ui text-sm outline-none border-b border-transparent focus:border-gold/40 transition-colors pb-0.5 min-w-0"
-                  />
-                  {teamMode === 'teams' && teams.length > 0 && (
-                    <select
-                      value={player.teamId ?? ''}
-                      onChange={(e) => assignPlayerTeam(player.id, e.target.value || undefined)}
-                      className="bg-elevated border border-border rounded-lg px-2 py-1 text-text-secondary text-xs font-ui focus:outline-none focus:border-gold/40 shrink-0"
-                      style={{ maxWidth: '110px' }}
-                    >
-                      <option value="">No team</option>
-                      {teams.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  <button
-                    onClick={() => removePlayer(player.id)}
-                    className="p-1.5 rounded-lg text-text-muted hover:text-red hover:bg-red/10 transition-colors shrink-0"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                {/* Row 2: color swatches */}
-                <div className="flex items-center gap-2 pl-8">
-                  <span className="text-text-muted text-xs font-ui shrink-0">Color:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PLAYER_COLORS.map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => updatePlayerColor(player.id, c)}
-                        className="w-5 h-5 rounded-full border-2 transition-all hover:scale-125"
-                        style={{
-                          background: c,
-                          borderColor: player.color === c ? 'white' : 'transparent',
-                          boxShadow: player.color === c ? `0 0 6px ${c}` : undefined,
-                        }}
-                        title={c}
-                      />
-                    ))}
-                  </div>
-                  <div
-                    className="w-5 h-5 rounded-full shrink-0 ml-1"
-                    style={{
-                      background: player.color,
-                      boxShadow: `0 0 6px ${player.color}80`,
-                    }}
-                  />
-                  {team && (
-                    <span className="text-text-muted text-xs font-ui ml-1">
-                      · Team:
-                      <span className="ml-1 font-semibold" style={{ color: team.color }}>
-                        {team.name}
-                      </span>
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          {players.length === 0 && (
-            <p className="text-text-muted text-sm font-ui py-2">
-              No players yet. Add the first player above.
-            </p>
-          )}
-        </div>
-      </div>
+                <div
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ background: players.find((p) => p.id === selectedPlayerId)?.color }}
+                />
+                <span className="font-ui text-sm text-gold flex-1">
+                  <strong>{players.find((p) => p.id === selectedPlayerId)?.name}</strong>
+                  {' '}selected — tap a team to assign, or tap the pool to unassign
+                </span>
+                <button
+                  onClick={() => setSelectedPlayerId(null)}
+                  className="p-1 text-gold/60 hover:text-gold shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Unassigned pool */}
+          <div
+            className={`p-4 rounded-2xl border-2 border-dashed transition-all duration-200 ${
+              selectedPlayerId ? 'border-gold/50 cursor-pointer' : 'border-border'
+            }`}
+            style={{ background: selectedPlayerId ? 'rgba(240,180,41,0.04)' : undefined }}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDropOnPool}
+            onClick={handlePoolClick}
+          >
+            <div className="font-ui text-sm text-text-muted mb-3 flex items-center gap-2">
+              <span>Unassigned</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-elevated text-xs font-mono">{unassigned.length}</span>
+              {selectedPlayerId && (
+                <span className="text-gold text-xs ml-1">← tap here to unassign</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 min-h-[48px]">
+              {unassigned.map((p) => (
+                <PlayerBubble
+                  key={p.id}
+                  player={p}
+                  isSelected={selectedPlayerId === p.id}
+                  isDragging={dragPlayerId === p.id}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onClick={handleBubbleClick}
+                  onRemove={removePlayer}
+                  onNameChange={updatePlayerName}
+                  onColorDotClick={openColorPicker}
+                />
+              ))}
+              {unassigned.length === 0 && (
+                <p className="text-text-muted text-sm font-ui py-1 w-full text-center">
+                  All players are in teams 🎉
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Teams header + controls */}
+          <div className="flex items-center justify-between">
+            <h3 className="font-display text-xl text-text-primary">Teams</h3>
+            <div className="flex gap-2">
+              {teams.length > 0 && players.length > 0 && (
+                <button
+                  onClick={shufflePlayerTeams}
+                  className={btnSecondary}
+                  title="Randomly distribute all players across teams"
+                >
+                  <Shuffle className="w-4 h-4" /> Shuffle
+                </button>
+              )}
+              <button onClick={addTeam} className={btnSecondary}>
+                <Plus className="w-4 h-4" /> Add Team
+              </button>
+            </div>
+          </div>
+
+          {/* Team zones */}
+          <div className="space-y-3">
+            {teams.map((team) => (
+              <TeamZone
+                key={team.id}
+                team={team}
+                teamPlayers={players.filter((p) => p.teamId === team.id)}
+                selectedPlayerId={selectedPlayerId}
+                dragPlayerId={dragPlayerId}
+                usedTeamColors={teams.map((t) => t.color)}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDrop={handleDropOnTeam}
+                onZoneClick={handleZoneClick}
+                onBubbleClick={handleBubbleClick}
+                onRemovePlayer={removePlayer}
+                onNameChange={updatePlayerName}
+                onUpdateTeamName={updateTeamName}
+                onRemoveTeam={removeTeam}
+                onColorDotClick={openColorPicker}
+              />
+            ))}
+            {teams.length === 0 && (
+              <p className="text-text-muted text-sm font-ui text-center py-4">
+                No teams yet. Add a team above, then drag or tap players into it.
+              </p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-// ─── SetupPage ─────────────────────────────────────────────────────
+// ─── SetupPage ──────────────────────────────────────────────────
 export default function SetupPage() {
-  const setPhase = useGameStore((s) => s.setPhase);
-  const startGame = useGameStore((s) => s.startGame);
-  const quizSet = useGameStore((s) => s.quizSet);
-  const players = useGameStore((s) => s.players);
-  const setupTab = useGameStore((s) => s.setupTab);
+  const setPhase   = useGameStore((s) => s.setPhase);
+  const startGame  = useGameStore((s) => s.startGame);
+  const quizSet    = useGameStore((s) => s.quizSet);
+  const players    = useGameStore((s) => s.players);
+  const setupTab   = useGameStore((s) => s.setupTab);
   const setSetupTab = useGameStore((s) => s.setSetupTab);
 
   const canStart =
@@ -681,7 +951,7 @@ export default function SetupPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-10">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-10">
         <button
           onClick={() => setPhase('home')}
           className="flex items-center gap-2 text-text-secondary hover:text-text-primary font-ui text-sm transition-colors"
@@ -692,7 +962,7 @@ export default function SetupPage() {
         <button
           onClick={startGame}
           disabled={!canStart}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-ui font-semibold text-sm transition-all ${
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-ui font-semibold text-sm transition-all ${
             canStart
               ? 'bg-gold text-black hover:bg-gold-light shadow-[0_0_16px_rgba(240,180,41,0.4)] cursor-pointer'
               : 'bg-elevated text-text-muted border border-border cursor-not-allowed'

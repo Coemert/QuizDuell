@@ -97,8 +97,21 @@ export default function ScoreBoard() {
                 <div className="flex-1 min-w-0">
                   <div className="font-ui text-sm font-semibold text-text-primary truncate">{row.name}</div>
                   {row.members.length > 0 && (
-                    <div className="text-xs text-text-muted truncate">
-                      {row.members.map((m) => m.name).join(', ')}
+                    <div className="flex gap-1 flex-wrap mt-1">
+                      {row.members.map((m) => (
+                        <div
+                          key={m.id}
+                          className="w-5 h-5 rounded-full flex items-center justify-center font-display text-[10px] shrink-0"
+                          style={{
+                            background:  m.color + '28',
+                            border:      `1.5px solid ${m.color}`,
+                            color:       m.color,
+                          }}
+                          title={m.name}
+                        >
+                          {m.name.charAt(0).toUpperCase()}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

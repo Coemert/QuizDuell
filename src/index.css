@@ -149,7 +149,7 @@ body {
   animation: scoreFlashRed 1.5s ease-out forwards;
 }
 
-/* Custom input styles */
+/* Custom range input styles */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -162,8 +162,8 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #f0b429;
   cursor: pointer;
@@ -171,8 +171,8 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #f0b429;
   cursor: pointer;
@@ -180,6 +180,69 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 0 6px rgba(240, 180, 41, 0.6);
 }
 
-text-text-secondary text-sm font-ui{
-  text-align: center;
+/* ── Hide native number input spinners ─────────────────────── */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ── Touch-friendly minimum tap targets ────────────────────── */
+@media (pointer: coarse) {
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .board-cell {
+    min-height: 64px;
+  }
+  /* Larger text on touch screens for readability */
+  .font-ui {
+    font-size: max(1em, 16px);
+  }
+}
+
+/* ── Victory screen animations ─────────────────────────────── */
+@keyframes confettiDrop {
+  0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes crownFloat {
+  0%,  100% { transform: translateY(0px)   rotate(-8deg) scale(1);    }
+  50%        { transform: translateY(-12px) rotate(8deg)  scale(1.06); }
+}
+
+@keyframes victoryGlow {
+  0%,  100% { text-shadow: 0 0 10px #f0b429, 0 0 30px #f0b429; }
+  50%        { text-shadow: 0 0 20px #f0b429, 0 0 60px #f0b429, 0 0 90px #f0b429; }
+}
+
+@keyframes riseFromFloor {
+  from { transform: translateY(80px) scale(0.85); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+
+.crown-float    { animation: crownFloat    2s   ease-in-out infinite; display: inline-block; }
+.victory-glow   { animation: victoryGlow   2s   ease-in-out infinite; }
+.rise-from-floor{ animation: riseFromFloor 0.7s ease-out    forwards; }
+
+/* ── Drag-over highlight for team zones ────────────────────── */
+.team-zone-drag-over {
+  box-shadow: 0 0 0 2px currentColor, 0 0 16px currentColor;
+}
+
+/* ── Easter egg flash ──────────────────────────────────────── */
+@keyframes easterFlash {
+  0%   { opacity: 0; transform: scale(0.8); }
+  20%  { opacity: 1; transform: scale(1.05); }
+  80%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.95); }
+}
+.easter-flash {
+  animation: easterFlash 3s ease forwards;
 }

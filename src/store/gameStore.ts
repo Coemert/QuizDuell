@@ -101,6 +101,7 @@ interface GameStore {
   dismissQuestion: () => void;
   nextPlayer: () => void;
   resetGame: () => void;
+  shufflePlayerTeams: () => void;
 
   // --- Computed ---
   getPlayerScore: (playerId: string) => number;
@@ -240,11 +241,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   addTeam: () => {
     const s = get();
-    const colorIndex = s.teams.length % TEAM_COLORS.length;
+    const usedColors = new Set(s.teams.map((t) => t.color));
+    const autoColor =
+      TEAM_COLORS.find((c) => !usedColors.has(c)) ??
+      TEAM_COLORS[s.teams.length % TEAM_COLORS.length];
     set({
       teams: [
         ...s.teams,
-        { id: uuidv4(), name: `Team ${s.teams.length + 1}`, color: TEAM_COLORS[colorIndex] },
+        { id: uuidv4(), name: `Team ${s.teams.length + 1}`, color: autoColor },
       ],
     });
   },
@@ -261,15 +265,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
     })),
 
   // Game
-  startGame: () =>
+  startGame: () => {
+    const s = get();
+    // Randomise both team turn order and within-team player order each game
+    const shuffledTeams   = [...s.teams  ].sort(() => Math.random() - 0.5);
+    const shuffledPlayers = [...s.players].sort(() => Math.random() - 0.5);
     set({
+      teams:   shuffledTeams,
+      players: shuffledPlayers,
       phase: 'game',
       currentPlayerIndex: 0,
       currentTeamIndex: 0,
       scoreHistory: [],
       activeQuestion: null,
       questionPhase: null,
-    }),
+    });
+  },
 
   selectQuestion: (categoryId, questionId) => {
     const s = get();
@@ -411,5 +422,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const player = s.players.find((p) => p.id === playerId);
     if (!player?.teamId) return undefined;
     return s.teams.find((t) => t.id === player.teamId);
+  },
+
+  shufflePlayerTeams: () => {
+    const s = get();
+    if (s.teams.length === 0) return;
+    const n = s.players.length;
+    const t = s.teams.length;
+    const base   = Math.floor(n / t);
+    const extras = n % t;
+
+    // Randomise WHICH teams get the extra player(s) — fair distribution
+    const teamOrder = [...s.teams].sort(() => Math.random() - 0.5);
+    const slots: string[] = [];
+    teamOrder.forEach((team, i) => {
+      const count = base + (i < extras ? 1 : 0);
+      for (let j = 0; j < count; j++) slots.push(team.id);
+    });
+    // Shuffle the slot array so players aren't clustered by team
+    slots.sort(() => Math.random() - 0.5);
+
+    const shuffled = [...s.players].sort(() => Math.random() - 0.5);
+    set({ players: shuffled.map((p, i) => ({ ...p, teamId: slots[i] })) });
   },
 }));
